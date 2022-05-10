@@ -60,6 +60,9 @@ spec:
     - port: 10008
       targetPort: 10008
       name : proxy
+    - port: 13306
+      targetPort: 13306
+      name : mariadb
 ---
 apiVersion: v1
 kind: Endpoints
@@ -74,6 +77,8 @@ subsets:
       name : keystone
     - port: 10008
       name : proxy
+    - port: 13306
+      name0 : mariadb
       
 ## 설정 후 sidecar의 egress 변경 필요
 ```

@@ -1,0 +1,15 @@
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Sidecar
+metadata:
+  name: portal-db
+  namespace: cf-workloads
+spec:
+  workloadSelector:
+    labels:
+      cloudfoundry.org/org_name: system
+      cloudfoundry.org/space_name: dev
+  egress:
+  - hosts:
+    - cf-db/*
+    - cf-workloads/*

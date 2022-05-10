@@ -1,4 +1,30 @@
 # portal-sidecar-summry
+※ PaaS-TA Sidecar와 istio sidecar의 이름이 겹치므로 PaaS-TA Sidecar는 이하 문서에서 cf-for-k8s로 언급한다.
+
+### cf-for-k8s http 사용
+- 배포된 gateway에서 http 리다이렉트 되는 설정을 false로 설정한다
+```
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: istio-ingressgateway
+  namespace: cf-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - '*'
+    port:
+      name: http
+      number: 80
+      protocol: HTTP
+    tls:
+      httpsRedirect: false
+      ..................
+      ..................
+```
+
 
 ### cf-for-k8s variable
 - 편안한 Portal APP manifest 설정을 위한 manifest/sidecar-values.yml 의 변경이 필요 하다.

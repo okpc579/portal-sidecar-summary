@@ -1,0 +1,71 @@
+---
+#PV
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: openstack-swift-keystone-docker-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: openstack-swift-keystone-docker-storage-class
+  capacity:
+    storage: 10Gi # 스토리지 용량 크기
+  accessModes:
+    - ReadWriteMany # 하나의 Pod에서만 access가 가능하도록 설정, ReadWriteMany는 여러개 노드
+  hostPath:
+    path: "/data/k8s/openstack-swift-keystone-docker/" # Host에 저장될 스토리지 공간
+---
+#PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openstack-swift-keystone-docker-pv-claim
+spec:
+  storageClassName: openstack-swift-keystone-docker-storage-class
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+---
+#SVC
+apiVersion: v1
+kind: Service
+metadata:
+  name: openstack-swift-keystone-docker
+spec:
+  ports:
+  - port: 15001
+    targetPort: 35357
+  selector:
+    app: openstack-swift-keystone-docker
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openstack-swift-keystone-docker
+spec:
+  selector:
+    matchLabels:
+      app: openstack-swift-keystone-docker
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: openstack-swift-keystone-docker
+    spec:
+      containers:
+      - image: jeantil/openstack-swift-keystone-docker:pike
+        name: openstack-swift-keystone-docker
+        ports:
+        - containerPort: 15001 # Container 포트
+          name: openstack-swift
+        volumeMounts:
+        - name: openstack-swift-keystone-docker-persistent-storage
+          mountPath: /var/lib/openstack-swift-keystone-docker
+      volumes:
+      - name: openstack-swift-keystone-docker-persistent-storage
+        persistentVolumeClaim:
+          claimName: openstack-swift-keystone-docker-pv-claim
+---

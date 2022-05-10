@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: storage-service
+  namespace: cf-workloads
+spec:
+  ports:
+    - port: 15001
+      targetPort: 15001
+      name : keystone
+    - port: 10008
+      targetPort: 10008
+      name : proxy
+    - port: 13306
+      targetPort: 13306
+      name : mariadb
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: storage-service
+  namespace: cf-workloads
+subsets:
+- addresses:
+    - ip: 10.0.2.120
+  ports:
+    - port: 15001
+      name : keystone
+    - port: 10008
+      name : proxy
+    - port: 13306
+      name0 : mariadb

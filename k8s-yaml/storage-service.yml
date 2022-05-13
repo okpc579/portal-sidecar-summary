@@ -14,6 +14,7 @@ spec:
     - port: 13306
       targetPort: 13306
       name : mariadb
+      appProtocol: mysql
 ---
 apiVersion: v1
 kind: Endpoints

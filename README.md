@@ -90,6 +90,28 @@ spec:
 $ kubectl apply -f allow-cf-db-ingress-from-cf-workloads.yaml
 ```
 
+### swfit object stroage endpoint 설정
+- k8s의 service를 이용하여 외부 swift object storage와 연결 할 시 swift의 endpoint를 수정해야 한다.
+```
+# swift가 설치된 환경의 openstack 정보를 export 한다.
+export OS_USERNAME=admin
+export OS_PASSWORD=ADMIN_PASS
+export OS_PROJECT_NAME=admin
+export OS_USER_DOMAIN_NAME=Default
+export OS_PROJECT_DOMAIN_NAME=Default
+export OS_AUTH_URL=http://localhost:14999/v3
+export OS_IDENTITY_API_VERSION=3
+
+# openstack cli를 이용하여 endpoint를 확인한다.
+$ openstack
+$ endpoint list
+
+# endpoint 의 url이 사용하려는 경우와 다른경우 수정/생성한다.
+
+
+
+
+```
 
 ### istio(sidecar)
 - cf-workloads가 다른 k8s service와 통신을 하려면 k8s sidecar의 설정을 약간 변경해줘야 한다.
@@ -120,7 +142,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: storage-service
-  namespace: cf-workloads
+  namespace: paasta
 spec:
   ports:
     - port: 15001
@@ -138,7 +160,7 @@ apiVersion: v1
 kind: Endpoints
 metadata:
   name: storage-service
-  namespace: cf-workloads
+  namespace: paasta
 subsets:
 - addresses:
     - ip: 10.0.2.120

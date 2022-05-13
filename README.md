@@ -131,7 +131,6 @@ spec:
   egress:
   - hosts:
     - cf-db/*    # portal-app 이 cf-db와 통신 가능하게 설정
-    - cf-workloads/* # portal-container-infra가 외부 VM 이고 service를 cf-workloads에 설정했을 경우
     - ......     # 필요 시 추가 설정
 ```
 

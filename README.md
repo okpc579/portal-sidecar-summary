@@ -1,4 +1,4 @@
-# portal-sidecar-summry
+# portal-sidecar-summary
 ※ PaaS-TA Sidecar와 istio sidecar의 이름이 겹치므로 PaaS-TA Sidecar는 이하 문서에서 cf-for-k8s로 언급한다.
 
 ### cf-for-k8s http 사용

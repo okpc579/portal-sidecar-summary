@@ -48,6 +48,7 @@ uaa:
 
 ### k8s networkpolicy
 - 현재는 networkpolicy를 전부 해제하고 테스트 중인데 이후 테스트는 networkpolicy를 유지한 채 테스트 진행해봐야함 --> 테스트 필요
+- 외부의 portal db를 설정 할 시 create-security-group을 이용하여 portal 외부 db를 등록해야한다.
 
 ### istio(sidecar)
 - cf-workloads가 다른 k8s service와 통신을 하려면 k8s sidecar의 설정을 약간 변경해줘야 한다.

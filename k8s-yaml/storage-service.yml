@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: storage-service
-  namespace: cf-workloads
+  namespace: paasta
 spec:
   ports:
     - port: 15001
@@ -20,7 +20,7 @@ apiVersion: v1
 kind: Endpoints
 metadata:
   name: storage-service
-  namespace: cf-workloads
+  namespace: paasta
 subsets:
 - addresses:
     - ip: 10.0.2.120

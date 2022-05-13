@@ -49,6 +49,47 @@ uaa:
 ### k8s networkpolicy
 - 현재는 networkpolicy를 전부 해제하고 테스트 중인데 이후 테스트는 networkpolicy를 유지한 채 테스트 진행해봐야함 --> 테스트 필요
 - 외부의 portal db를 설정 할 시 create-security-group을 이용하여 portal 외부 db를 등록해야한다.
+```
+$ vi portal_rule.json
+[
+    {
+        "destination": "10.0.2.120",
+        "protocol": "all"
+    }
+]
+
+$ cf create-security-group portal portal_rule.json
+$ cf bind-runnning-security-group portal
+```
+
+- cf-db와 Portal app이 통신하기 위하여 networkpolicy를 등록한다
+```
+$ vi allow-cf-db-ingress-from-cf-workloads.yaml
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cf-db-ingress-from-cf-workloads
+  namespace: cf-db
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          cf-for-k8s.cloudfoundry.org/cf-workloads-ns: ""
+      podSelector:
+        matchLabels:
+          cloudfoundry.org/org_name: system # portal org 이름
+      podSelector:
+        matchLabels:
+          cloudfoundry.org/space_name: dev # portal space 이름
+---
+$ kubectl apply -f allow-cf-db-ingress-from-cf-workloads.yaml
+```
+
 
 ### istio(sidecar)
 - cf-workloads가 다른 k8s service와 통신을 하려면 k8s sidecar의 설정을 약간 변경해줘야 한다.

@@ -90,6 +90,7 @@ spec:
     - port: 13306
       targetPort: 13306
       name : mariadb
+      appProtocol: mysql # istio의 경우 특정 응용프로그램의 protocol을 정확히 명시해야 한다.
 ---
 apiVersion: v1
 kind: Endpoints

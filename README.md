@@ -47,8 +47,7 @@ uaa:
 ```
 
 ### k8s networkpolicy
-- 현재는 networkpolicy를 전부 해제하고 테스트 중인데 이후 테스트는 networkpolicy를 유지한 채 테스트 진행해봐야함 --> 테스트 필요
-- 외부의 portal db를 설정 할 시 create-security-group을 이용하여 portal 외부 db를 등록해야한다.
+- 외부의 portal db를 설정 할 시 create-security-group을 이용하여 portal 외부 db를 등록해야한다. (추후 재 확인 결과 적용 안해도 정상동작하는거로 보임.. 추후 수정 예정)
 ```
 $ vi portal_rule.json
 [

@@ -106,9 +106,9 @@ export OS_IDENTITY_API_VERSION=3
 $ openstack
 $ endpoint list
 
-# endpoint 의 url이 사용하려는 경우와 다른경우 수정/생성한다.
-
-
+# endpoint 의 url이 사용하려는 경우와 다른경우 수정/생성한다. (list를 확인 후 내용을 수정한다)
+$ endpoint create --region paasta swift public http://storage-service.paasta.svc.cluster.local:10008/v1/AUTH_%\(project_id\)s
+$ endpoint create --region paasta keystone  public http://storage-service.paasta.svc.cluster.local:14999/v3/ # keystone이 중복일 경우 ID로 설정
 
 
 ```

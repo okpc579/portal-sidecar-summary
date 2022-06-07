@@ -85,6 +85,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: mysql-initdb-config
+  namespace: paasta
 data:
   init.sql: |
     CREATE USER 'keystone'@'localhost' IDENTIFIED BY 'swiftstack';

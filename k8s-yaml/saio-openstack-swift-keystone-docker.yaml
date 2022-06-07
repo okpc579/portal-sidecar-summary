@@ -1,71 +1,73 @@
 ---
-#PV
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: openstack-swift-keystone-docker-pv-volume
-  labels:
-    type: local
-spec:
-  storageClassName: openstack-swift-keystone-docker-storage-class
-  capacity:
-    storage: 10Gi # 스토리지 용량 크기
-  accessModes:
-    - ReadWriteMany # 하나의 Pod에서만 access가 가능하도록 설정, ReadWriteMany는 여러개 노드
-  hostPath:
-    path: "/data/k8s/openstack-swift-keystone-docker/" # Host에 저장될 스토리지 공간
----
-#PVC
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: openstack-swift-keystone-docker-pv-claim
-spec:
-  storageClassName: openstack-swift-keystone-docker-storage-class
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 10Gi
----
 #SVC
 apiVersion: v1
 kind: Service
 metadata:
   name: openstack-swift-keystone-docker
+  namespace: paasta
 spec:
   ports:
-  - port: 15001
+  - port: 35357
     targetPort: 35357
+    name: keystone1
+  - port: 5000
+    targetPort: 5000
+    name: keystone2
+  - port: 10008
+    targetPort: 10008
+    name: proxy1
+  - port: 10009
+    targetPort: 10009
+    name: proxy2
   selector:
     app: openstack-swift-keystone-docker
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: openstack-swift-keystone-docker
+  namespace: paasta
 spec:
+  serviceName: openstack-swift-keystone-docker
+  replicas: 1
   selector:
     matchLabels:
       app: openstack-swift-keystone-docker
-  strategy:
-    type: Recreate
   template:
     metadata:
       labels:
         app: openstack-swift-keystone-docker
     spec:
       containers:
-      - image: jeantil/openstack-swift-keystone-docker:pike
+      - image: 3.36.165.47.nip.io/sidecar/saio@sha256:55072b2f032b8bb25aa9dda0c501067db9ba119f09621f66b631f785b2f65bf7
         name: openstack-swift-keystone-docker
+        env:
+        - name: IF_USE_SWIFT_EXTERNAL_MARIADB
+          value: "true"
+        - name: MARIADB_PORT
+          value: "3306"
+        - name: MARIADB_ADMIN_PASSWORD
+          value: "Paasta@2019"
+        - name: SWIFT_ADDRESS
+          value: "openstack-swift-keystone-docker.paasta.svc.cluster.local"
+        - name: KEYSTONE_PORT
+          value: "5000"
+        - name: PROXY_PORT
+          value: "10009"
+        - name: PORTAL_OPENSTACK_REGION
+          value: "paasta"
         ports:
         - containerPort: 15001 # Container 포트
           name: openstack-swift
         volumeMounts:
         - name: openstack-swift-keystone-docker-persistent-storage
-          mountPath: /var/lib/openstack-swift-keystone-docker
-      volumes:
-      - name: openstack-swift-keystone-docker-persistent-storage
-        persistentVolumeClaim:
-          claimName: openstack-swift-keystone-docker-pv-claim
+          mountPath: /mnt
+  volumeClaimTemplates:
+  - metadata:
+      name: openstack-swift-keystone-docker-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10G
 ---

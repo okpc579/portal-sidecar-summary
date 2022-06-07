@@ -24,6 +24,13 @@ spec:
       ..................
       ..................
 ```
+- 혹은 manifest/sidecar-values.yml에 해당 내용을 추가해서 rendering을 진행한다.
+```diff
+is_self_signed_certificate: true
++gateway:
++  https_only: false
+
+```
 
 
 ### cf-for-k8s variable

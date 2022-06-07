@@ -1,46 +1,20 @@
 ---
-#PV
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: db-pv-volume
-  labels:
-    type: local
-spec:
-  storageClassName: db-storage-class
-  capacity:
-    storage: 10Gi # 스토리지 용량 크기
-  accessModes:
-    - ReadWriteMany # 하나의 Pod에서만 access가 가능하도록 설정, ReadWriteMany는 여러개 노드
-  hostPath:
-    path: "/data/k8s/db/" # Host에 저장될 스토리지 공간
----
-#PVC
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: db-pv-claim
-spec:
-  storageClassName: db-storage-class
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 10Gi
----
 #SECRET
 apiVersion: v1
 kind: Secret
 metadata:
   name: mariadb-secret
+  namespace: paasta
 data:
-  password: #################### base64로 password 생성 후 기입
+  password: UGFhc3RhQDIwMTk= #Paasta@2019
+  #password: YWRtaW4= #admin
 ---
 #SVC
 apiVersion: v1
 kind: Service
 metadata:
   name: mariadb
+  namespace: paasta
 spec:
   ports:
   - port: 3306
@@ -48,20 +22,33 @@ spec:
     app: mariadb
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: mariadb
+  namespace: paasta
 spec:
+  serviceName: mariadb
+  replicas: 1
   selector:
     matchLabels:
       app: mariadb
-  strategy:
-    type: Recreate
   template:
     metadata:
       labels:
         app: mariadb
     spec:
+      initContainers:
+      - name: mariadb-create-directory-structure
+        image: busybox
+        command:
+          [
+            "sh",
+            "-c",
+            "/bin/mkdir -p /bitnami/mariadb/data && /bin/chmod -R 777 /bitnami/mariadb",
+          ]
+        volumeMounts:
+          - name: mariadb-data
+            mountPath: /bitnami/mariadb
       containers:
       - image: docker.io/bitnami/mariadb:10.7 #mariadb:10.5.15 # MariaDB 이미지 
         name: mariadb
@@ -71,8 +58,8 @@ spec:
         volumeMounts:
         - name: mysql-initdb
           mountPath: /docker-entrypoint-initdb.d
-        - name: mariadb-persistent-storage
-          mountPath: /var/lib/mysql
+        - name: mariadb-data
+          mountPath: /bitnami/mariadb
         env :
         - name: MARIADB_ROOT_PASSWORD #MYSQL_ROOT_PASSWORD
           valueFrom:
@@ -83,9 +70,15 @@ spec:
       - name: mysql-initdb
         configMap:
           name: mysql-initdb-config
-      - name: mariadb-persistent-storage
-        persistentVolumeClaim:
-          claimName: db-pv-claim
+  volumeClaimTemplates:
+  - metadata:
+      name: mariadb-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 300M
+
 ---
 ---
 apiVersion: v1
@@ -94,6 +87,10 @@ metadata:
   name: mysql-initdb-config
 data:
   init.sql: |
+    CREATE USER 'keystone'@'localhost' IDENTIFIED BY 'swiftstack';
+    CREATE DATABASE IF NOT EXISTS keystone CHARACTER SET utf8 COLLATE utf8_general_ci;
+    use keystone;
+    GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' IDENTIFIED BY 'swiftstack' WITH GRANT OPTION;
     CREATE DATABASE /*!32312 IF NOT EXISTS*/`portaldb` /*!40100 DEFAULT CHARACTER SET utf8 */;
     CREATE DATABASE /*!32312 IF NOT EXISTS*/`webconfig` /*!40100 DEFAULT CHARACTER SET utf8 */;
 

@@ -179,7 +179,7 @@ subsets:
     - port: 10008
       name : proxy
     - port: 13306
-      name0 : mariadb
+      name : mariadb
       
 ## 설정 후 sidecar의 egress 변경 필요
 ```

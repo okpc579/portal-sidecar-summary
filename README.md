@@ -58,7 +58,7 @@ uaa:
 ```
 
 ### k8s networkpolicy
-- ~~외부의 portal db를 설정 할 시 create-security-group을 이용하여 portal 외부 db를 등록해야한다.~~ (재 확인 결과 적용 안해도 정상동작하는거로 보임.. 추후 수정 예정)
+- ~~외부의 portal db를 설정 할 시 create-security-group을 이용하여 portal 외부 db를 등록해야한다.~~ (재 확인 결과 적용 안해도 정상동작하는거로 보임.. 깔끔한 상태에서 적용 안해도 작동되는 것을 테스트 완료)
 ```
 $ vi portal_rule.json
 [
@@ -100,29 +100,6 @@ spec:
 $ kubectl apply -f allow-cf-db-ingress-from-cf-workloads.yaml
 ```
 
-### swfit object stroage endpoint 설정
-- k8s의 service를 이용하여 외부 swift object storage와 연결 할 시 swift의 endpoint를 수정해야 한다.
-```
-# swift가 설치된 환경의 openstack 정보를 export 한다.
-export OS_USERNAME=admin
-export OS_PASSWORD=ADMIN_PASS
-export OS_PROJECT_NAME=admin
-export OS_USER_DOMAIN_NAME=Default
-export OS_PROJECT_DOMAIN_NAME=Default
-export OS_AUTH_URL=http://localhost:14999/v3
-export OS_IDENTITY_API_VERSION=3
-
-# openstack cli를 이용하여 endpoint를 확인한다.
-$ openstack
-$ endpoint list
-
-# endpoint 의 url이 사용하려는 경우와 다른경우 수정/생성한다. (list를 확인 후 내용을 수정한다)
-$ endpoint create --region paasta swift public http://storage-service.paasta.svc.cluster.local:10008/v1/AUTH_%\(project_id\)s
-$ endpoint create --region paasta keystone  public http://storage-service.paasta.svc.cluster.local:14999/v3/ # keystone이 중복일 경우 ID로 설정
-
-
-```
-
 ### istio(sidecar)
 - cf-workloads가 다른 k8s service와 통신을 하려면 k8s sidecar의 설정을 약간 변경해줘야 한다.
 ```
@@ -144,8 +121,24 @@ spec:
     - ......     # 필요 시 추가 설정
 ```
 
+### 외부 infra VM 사용 시 
+#### 서비스 등록
 - 최종적으로는 Portal DB와 Storage가 POD로 작동될 예정 이지만 테스트 용으로 외부 infra와 통신하게 설정하였다.
 ```
+# portal 배포 시 사용 하는 namespace 등록
+$ vi namespace.yml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: paasta
+  labels:
+    paasta/ns: ""
+---
+$ kubectl apply -f namespace.yml
+
+
+# 외부 DB와 연결할 SVC 등록
 $ vi storage-service.yml
 apiVersion: v1
 kind: Service
@@ -181,9 +174,138 @@ subsets:
     - port: 13306
       name : mariadb
       
-## 설정 후 sidecar의 egress 변경 필요
+## 설정 후 sidecar의 egress 변경 필요 (재 테스트 결과 변경 안하여도 정상 동작함)
+
+$ kubectl apply -f storage-service.yml
 ```
 
+#### swfit object stroage endpoint 설정
+- k8s의 service를 이용하여 외부 swift object storage와 연결 할 시 swift의 endpoint를 수정해야 한다.
+```
+# swift가 설치된 환경의 openstack 정보를 export 한다.
+export OS_USERNAME=admin
+export OS_PASSWORD=ADMIN_PASS
+export OS_PROJECT_NAME=admin
+export OS_USER_DOMAIN_NAME=Default
+export OS_PROJECT_DOMAIN_NAME=Default
+export OS_AUTH_URL=http://localhost:14999/v3
+export OS_IDENTITY_API_VERSION=3
+
+# openstack cli를 이용하여 endpoint를 확인한다.
+$ openstack
+$ endpoint list
+
+# endpoint 의 url이 사용하려는 경우와 다른경우 수정/생성한다. (list를 확인 후 내용을 수정한다)
+$ endpoint create --region paasta swift public http://storage-service.paasta.svc.cluster.local:10008/v1/AUTH_%\(project_id\)s
+$ endpoint create --region paasta keystone  public http://storage-service.paasta.svc.cluster.local:14999/v3/ # keystone이 중복일 경우 ID로 설정
+```
+
+
+### INFRA POD 사용 시
+#### DB 배포
+- k8s-yaml/mariadb.yaml 파일을 이용하여 DB를 배포한다.
+```
+# portal 배포 시 사용 하는 namespace 등록
+$ vi namespace.yml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: paasta
+  labels:
+    paasta/ns: ""
+---
+$ kubectl apply -f namespace.yml
+
+# DB 배포
+$ vi k8s-yaml/mariadb.yaml
+---
+#SECRET
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mariadb-secret
+  namespace: paasta
+data:
+  password: UGFhc3RhQDIwMTk= #Paasta@2019      <<< base64로 구성된 password 반드시 수정 필요
+---
+#SVC
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  namespace: paasta
+spec:
+  ports:
+  - port: 3306    # service port 필요 시 수정
+  selector:
+    app: mariadb
+..............................
+..............................
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-initdb-config
+  namespace: paasta
+data:
+..............................
+..............................
+    INSERT INTO `infra_config` VALUES (1, '<%= p("portal_default.name") %>', '<%= p("portal_default.url") %>', '<%= p("portal_default.uaa_url") %>', '<%= p("portal_default.header_auth") %>', '<%= p("portal_default.desc") %>', '', '');        
+    # portal 설정에 맞게 수정 ex) INSERT INTO `infra_config` VALUES (1, 'PaaS-TA', 'http://portal-gateway.apps.galaxycloud.shop', 'https://uaa.galaxycloud.shop', 'Basic YWRtaW46b3BlbnBhYXN0YQ==', 'PaaS-TA infra', '', '');
+---
+---
+$ kubectl apply -f k8s-yaml/mariadb.yaml
+```
+
+#### Swift All in one 배포
+- 커스텀된 Swift all in one(이하 saio)를 k8s-yaml/mariadb.yaml 파일을 이용하여 DB를 배포한다.
+```
+$ vi k8s-yaml/saio-openstack-swift-keystone-docker.yaml
+
+---
+#SVC
+apiVersion: v1
+kind: Service
+metadata:
+  name: openstack-swift-keystone-docker
+  namespace: paasta
+spec:
+  ports:
+  - port: 5000            ### 서비스할 port 설정
+    targetPort: 5000      ### 서비스할 port 설정
+    name: keystone
+  - port: 10008           ### 서비스할 port 설정
+    targetPort: 10008     ### 서비스할 port 설정
+    name: proxy
+  selector:
+    app: openstack-swift-keystone-docker
+..............................
+..............................
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: openstack-swift-keystone-docker
+  namespace: paasta
+spec:
+  serviceName: openstack-swift-keystone-docker
+..............................
+..............................
+        env:
+        - name: IF_USE_SWIFT_EXTERNAL_MARIADB
+          value: "true"           # saio의 외부 mariadb 사용 (현재 false는 미구현 상태)
+        - name: MARIADB_PORT      # 이하 변수는 https://github.com/okpc579/openstack-swift-keystone-docker/blob/master/manifest/README.md 참고
+          value: "3306"
+        - name: MARIADB_ADMIN_PASSWORD
+          value: "Paasta@2019"
+        - name: SWIFT_ADDRESS
+          value: "openstack-swift-keystone-docker.paasta.svc.cluster.local"
+..............................
+..............................
+---
+
+$ kubectl apply -f k8s-yaml/saio-openstack-swift-keystone-docker.yaml
+```
 
 
 ### portal client

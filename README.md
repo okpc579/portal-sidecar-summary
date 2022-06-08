@@ -147,8 +147,8 @@ metadata:
   namespace: paasta
 spec:
   ports:
-    - port: 15001
-      targetPort: 15001
+    - port: 5000
+      targetPort: 5000
       name : keystone
     - port: 10008
       targetPort: 10008
@@ -167,7 +167,7 @@ subsets:
 - addresses:
     - ip: 10.0.2.120
   ports:
-    - port: 15001
+    - port: 5000
       name : keystone
     - port: 10008
       name : proxy

@@ -10,8 +10,8 @@ spec:
   - port: 35357
     targetPort: 35357
     name: keystone1
-  - port: 5000
-    targetPort: 5000
+  - port: 55001
+    targetPort: 55001
     name: keystone2
   - port: 10008
     targetPort: 10008
@@ -51,7 +51,7 @@ spec:
         - name: SWIFT_ADDRESS
           value: "openstack-swift-keystone-docker.paasta.svc.cluster.local"
         - name: KEYSTONE_PORT
-          value: "5000"
+          value: "55001"
         - name: PROXY_PORT
           value: "10009"
         - name: PORTAL_OPENSTACK_REGION
